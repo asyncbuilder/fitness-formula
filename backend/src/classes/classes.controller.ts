@@ -39,7 +39,7 @@ export class ClassesController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a single class by id' })
-  getClass(@Param('id') string) {
+  getClass(@Param('id') id: string) {
     return {
       id,
       title: 'Power Flow',
