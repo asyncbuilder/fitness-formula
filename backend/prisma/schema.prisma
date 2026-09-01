@@ -1,0 +1,282 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  USER
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum TrainerStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ClassType {
+  GROUP
+  PERSONAL
+  TRIAL
+  SPECIAL
+}
+
+enum ClassStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+  ARCHIVED
+}
+
+enum BookingStatus {
+  BOOKED
+  PAID
+  ATTENDED
+  CANCELLED
+  NO_SHOW
+  REFUNDED
+}
+
+enum SubscriptionType {
+  LESSON_COUNT
+  PERIOD
+  SINGLE_LESSON
+  TRIAL
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum PromotionType {
+  PERCENTAGE
+  FIXED
+  FREE_CLASS
+}
+
+enum PromotionStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  ARCHIVE
+  LOGIN
+  BOOK_CLASS
+  PURCHASE_SUBSCRIPTION
+  EXPORT
+}
+
+model Role {
+  id        String   @id @default(cuid())
+  name      RoleName  @unique
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id                 String           @id @default(cuid())
+  email              String           @unique
+  name               String
+  phone              String?
+  avatarUrl          String?
+  passwordHash       String?
+  roleId             String
+  role               Role             @relation(fields: [roleId], references: [id])
+  status             UserStatus       @default(ACTIVE)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  oauthAccounts      OAuthAccount[]
+  bookings           Booking[]
+  subscriptions      UserSubscription[]
+  promotionsUsed     PromotionUsage[]
+  trialUsages        TrialUsage[]
+  paymentHistory     Payment[]
+  auditLogs          AuditLog[]
+}
+
+model OAuthAccount {
+  id           String   @id @default(cuid())
+  provider     String
+  providerUserId String
+  email        String?
+  accessToken  String?
+  refreshToken String?
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([provider, providerUserId])
+}
+
+model Trainer {
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  specialization String?
+  photoUrl    String?
+  status      TrainerStatus @default(ACTIVE)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  classes     Class[]
+}
+
+model Class {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  classType   ClassType     @default(GROUP)
+  trainerId   String
+  trainer     Trainer       @relation(fields: [trainerId], references: [id])
+  startsAt    DateTime
+  endsAt      DateTime
+  capacity    Int
+  priceKopecks Int
+  status      ClassStatus   @default(PUBLISHED)
+  bookings    Booking[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([trainerId, startsAt])
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  classId     String
+  class       Class         @relation(fields: [classId], references: [id])
+  status      BookingStatus @default(BOOKED)
+  paymentId   String?
+  payment     Payment?      @relation(fields: [paymentId], references: [id])
+  source      String        @default("manual")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@unique([userId, classId])
+}
+
+model SubscriptionPlan {
+  id                  String             @id @default(cuid())
+  name                String
+  description         String?
+  priceKopecks        Int
+  lessonCount         Int?
+  durationDays        Int?
+  type                SubscriptionType
+  applicableClassType ClassType?
+  isActive            Boolean            @default(true)
+  status              SubscriptionStatus @default(ACTIVE)
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  purchases           UserSubscription[]
+  promotions          Promotion[]
+}
+
+model UserSubscription {
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id])
+  planId           String
+  plan             SubscriptionPlan  @relation(fields: [planId], references: [id])
+  startsAt         DateTime
+  endsAt           DateTime?
+  lessonsRemaining Int
+  status           SubscriptionStatus @default(ACTIVE)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  paymentId        String?
+  payment          Payment?          @relation(fields: [paymentId], references: [id])
+}
+
+model Promotion {
+  id                 String          @id @default(cuid())
+  name               String
+  description        String?
+  type               PromotionType
+  valueKopecks       Int?
+  percentageValue    Int?
+  startAt            DateTime
+  endAt              DateTime
+  promocode          String?
+  maxUses            Int?
+  isActive           Boolean         @default(true)
+  status             PromotionStatus @default(ACTIVE)
+  planId             String?
+  plan               SubscriptionPlan? @relation(fields: [planId], references: [id])
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  usages             PromotionUsage[]
+}
+
+model PromotionUsage {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  promotionId String
+  promotion  Promotion @relation(fields: [promotionId], references: [id])
+  usedAt     DateTime  @default(now())
+}
+
+model TrialUsage {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id])
+  usedAt     DateTime  @default(now())
+  classId    String?
+
+  @@unique([userId])
+}
+
+model Payment {
+  id                String          @id @default(cuid())
+  userId            String
+  user              User            @relation(fields: [userId], references: [id])
+  amountKopecks     Int
+  provider          String          @default("mock")
+  status            PaymentStatus   @default(PENDING)
+  reference         String?
+  metadata          String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  bookings          Booking[]
+  subscriptions     UserSubscription[]
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  adminUserId String?
+  adminUser   User?       @relation(fields: [adminUserId], references: [id])
+  action      AuditAction
+  entityType  String
+  entityId    String
+  result      String
+  metadata    String?
+  createdAt   DateTime    @default(now())
+}
