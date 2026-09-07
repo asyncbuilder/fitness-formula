@@ -1,3 +1,5 @@
+import CancelClassButton from './CancelClassButton';
+
 export default function AdminPage() {
   return (
     <main style={{ background: '#f3f3f0', minHeight: '100vh', padding: 32, color: '#141414' }}>
@@ -31,9 +33,12 @@ export default function AdminPage() {
             <h2 style={{ fontSize: 24 }}>Schedule</h2>
             <div style={{ marginTop: 18, display: 'grid', gap: 12 }}>
               {['Power Flow', 'Strength Lab', 'Mobility Reset'].map((item, index) => (
-                <div key={item} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 14px', borderRadius: 14, background: '#f5f5f2' }}>
+                <div key={item} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', borderRadius: 14, background: '#f5f5f2' }}>
                   <span>{item}</span>
-                  <span style={{ color: '#66645f' }}>{['Tue 18:00', 'Wed 08:30', 'Thu 12:15'][index]}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <span style={{ color: '#66645f' }}>{['Tue 18:00', 'Wed 08:30', 'Thu 12:15'][index]}</span>
+                    <CancelClassButton classId={`class_${index + 1}`} title={item} />
+                  </div>
                 </div>
               ))}
             </div>
