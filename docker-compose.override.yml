@@ -1,0 +1,8 @@
+# Additive override for update-1.1: builds the backend from Dockerfile.update-1.1,
+# which installs the OpenSSL libraries Prisma needs on Alpine. Picked up
+# automatically by `docker compose up --build` alongside docker-compose.yml.
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.update-1.1
